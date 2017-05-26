@@ -32,7 +32,6 @@
         <maven.surefire.plugin.version>2.19.1</maven.surefire.plugin.version>
         <build.helper.maven.plugin.version>1.12</build.helper.maven.plugin.version>
 
-        <version.commons.configuration>1.10</version.commons.configuration>
         <version.slf4j.api>1.7.9</version.slf4j.api>
         <version.microsoft.ewsjava.api>2.0</version.microsoft.ewsjava.api>
         <version.javax.mail>1.4.2</version.javax.mail>
@@ -45,11 +44,6 @@
             <groupId>javax.mail</groupId>
             <artifactId>mail</artifactId>
             <version>${version.javax.mail}</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-configuration</groupId>
-            <artifactId>commons-configuration</artifactId>
-            <version>${version.commons.configuration}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

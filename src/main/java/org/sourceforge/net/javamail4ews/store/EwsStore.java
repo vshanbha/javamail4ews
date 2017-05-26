@@ -18,18 +18,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 package org.sourceforge.net.javamail4ews.store;
 
+import java.util.Properties;
+
 import javax.mail.Folder;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.URLName;
 
-import org.apache.commons.configuration.Configuration;
-import org.sourceforge.net.javamail4ews.util.Util;
-
 import microsoft.exchange.webservices.data.core.ExchangeService;
 import microsoft.exchange.webservices.data.core.enumeration.property.WellKnownFolderName;
 import microsoft.exchange.webservices.data.property.complex.FolderId;
+
+import org.sourceforge.net.javamail4ews.util.Util;
 
 public class EwsStore extends Store {
 
@@ -87,7 +88,7 @@ public class EwsStore extends Store {
     	super.notifyConnectionListeners(type);
     }
     
-    protected Configuration getConfiguration() {
+    protected Properties getConfiguration() {
     	return Util.getConfiguration(session);
     }
 }

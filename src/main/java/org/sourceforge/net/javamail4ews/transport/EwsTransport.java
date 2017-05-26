@@ -18,12 +18,24 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 package org.sourceforge.net.javamail4ews.transport;
 
-import com.sun.mail.smtp.SMTPSendFailedException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.Properties;
 
-import org.apache.commons.configuration.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.sourceforge.net.javamail4ews.util.Util;
+import javax.mail.Address;
+import javax.mail.BodyPart;
+import javax.mail.Header;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.Part;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.URLName;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import javax.security.auth.login.Configuration;
 
 import microsoft.exchange.webservices.data.core.ExchangeService;
 import microsoft.exchange.webservices.data.core.enumeration.property.BodyType;
@@ -34,13 +46,11 @@ import microsoft.exchange.webservices.data.property.complex.EmailAddress;
 import microsoft.exchange.webservices.data.property.complex.FileAttachment;
 import microsoft.exchange.webservices.data.property.complex.MessageBody;
 
-import javax.mail.*;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.sourceforge.net.javamail4ews.util.Util;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Enumeration;
+import com.sun.mail.smtp.SMTPSendFailedException;
 
 public class EwsTransport extends Transport {
 	private static final String TEXT_STAR = "text/*";
@@ -102,7 +112,8 @@ public class EwsTransport extends Transport {
 	}
 	
 	private void sendMessage(EmailMessage msg) throws Exception {
-		if (getConfiguration().getBoolean("org.sourceforge.net.javamail4ews.transport.EwsTransport.SendAndSaveCopy")) {
+		if (Boolean.getBoolean(getConfiguration()
+				.getProperty("org.sourceforge.net.javamail4ews.transport.EwsTransport.SendAndSaveCopy"))) {
 			msg.sendAndSaveCopy(WellKnownFolderName.SentItems);
 		} else {
 			msg.send();
@@ -286,7 +297,7 @@ public class EwsTransport extends Transport {
 		return service;
 	}
 	
-	private Configuration getConfiguration() {
+	private Properties getConfiguration() {
 		return Util.getConfiguration(session);
 	}
 }

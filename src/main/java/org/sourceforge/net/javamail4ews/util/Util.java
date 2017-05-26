@@ -18,21 +18,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 package org.sourceforge.net.javamail4ews.util;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
+import java.util.Properties;
 
 import javax.mail.AuthenticationFailedException;
 import javax.mail.MessagingException;
 import javax.mail.Session;
-
-import org.apache.commons.configuration.CompositeConfiguration;
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import microsoft.exchange.webservices.data.core.ExchangeService;
 import microsoft.exchange.webservices.data.core.enumeration.misc.ExchangeVersion;
@@ -41,9 +36,13 @@ import microsoft.exchange.webservices.data.core.service.folder.Folder;
 import microsoft.exchange.webservices.data.credential.ExchangeCredentials;
 import microsoft.exchange.webservices.data.credential.WebCredentials;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public final class Util {
 	private static final Logger logger = LoggerFactory.getLogger("org.sourceforge.net.javamail4ews");
-
+	private static final Properties defaults = new Properties();
+	
 	static {
 		logger.info("JavaMail 4 EWS loaded in version {}\nUses Microsoft(R) software", getVersion());
 	}
@@ -62,27 +61,32 @@ public final class Util {
 	}
 
 
-	public static Configuration getConfiguration(Session pSession) {
-		try {
-			PropertiesConfiguration prop = new PropertiesConfiguration();
-			for(Object aKey : pSession.getProperties().keySet()) {
-				Object aValue = pSession.getProperties().get(aKey);
-
-				prop.addProperty(aKey.toString(), aValue);
-			}
-
-			CompositeConfiguration config = new CompositeConfiguration();
-			config.addConfiguration(prop);
-			URL lURL = Thread.currentThread().getContextClassLoader().getResource("javamail-ews-bridge.default.properties");
-			config.addConfiguration(new PropertiesConfiguration(lURL));
-			return config;
-		} catch (ConfigurationException e) {
-			throw new RuntimeException(e.getMessage(), e);
+	public static Properties getConfiguration(Session pSession) {
+		if (defaults.isEmpty()) {
+			try {
+				InputStream in = Thread.currentThread().getContextClassLoader()
+						.getResourceAsStream("META-INF/javamail-ews-bridge.default.properties");
+				defaults.load(in);
+			} catch (IOException e) {
+				logger.error("Error loading EWS bridge default properties", e);
+			}			
 		}
+		Properties prop = new Properties();
+		for(Object aKey : pSession.getProperties().keySet()) {
+			Object aValue = pSession.getProperties().get(aKey);
+			prop.put(aKey.toString(), aValue);
+		}
+		
+		for(Object key : defaults.keySet()) {
+			prop.put(key, defaults.get(key));
+		}
+		return prop;
 	}
 
 	public static ExchangeService getExchangeService(String host, int port, String user,
 			String password, Session pSession) throws MessagingException {
+		Properties props = getConfiguration(pSession);
+		
 		if (user == null) {
 			return null;
 		}
@@ -90,7 +94,7 @@ public final class Util {
 			return null;
 		}
 
-		String version = getConfiguration(pSession).getString(
+		String version = props.getProperty(
 				"org.sourceforge.net.javamail4ews.ExchangeVersion", "");
 		ExchangeVersion serverVersion = null;
 		if (!version.isEmpty()) {
@@ -101,7 +105,7 @@ public final class Util {
 						+ "' using default : no version specified");
 			}
 		}
-		boolean enableTrace = getConfiguration(pSession).getBoolean("org.sourceforge.net.javamail4ews.util.Util.EnableServiceTrace");
+		boolean enableTrace = Boolean.getBoolean(props.getProperty("org.sourceforge.net.javamail4ews.util.Util.EnableServiceTrace","false"));
 		ExchangeService service = null;
 		if (serverVersion != null) {
 			service = new ExchangeService(serverVersion);
@@ -130,7 +134,7 @@ public final class Util {
 
 		try {
 			//Bind to check if connection parameters are valid
-			if (getConfiguration(pSession).getBoolean("org.sourceforge.net.javamail4ews.util.Util.VerifyConnectionOnConnect")) {
+			if (Boolean.getBoolean(props.getProperty("org.sourceforge.net.javamail4ews.util.Util.VerifyConnectionOnConnect"))) {
 				logger.debug("Connection settings : trying to verify them");
 				Folder.bind(service, WellKnownFolderName.Inbox);
 				logger.info("Connection settings verified.");

@@ -32,7 +32,7 @@ tmtags
 # Eclipse
 .project
 .classpath
-
+.settings
 # Vim
 .*.s[a-w][a-z]
 *.un~
@@ -71,3 +71,5 @@ hs_err_pid*
 #maven 
 target/*
 mailsample/target/*
+/bin/
+/target/

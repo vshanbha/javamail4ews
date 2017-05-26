@@ -21,6 +21,7 @@ package org.sourceforge.net.javamail4ews.store;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Properties;
 
 import javax.mail.Flags;
 import javax.mail.Flags.Flag;
@@ -32,11 +33,7 @@ import javax.mail.event.FolderEvent;
 import javax.mail.event.FolderListener;
 import javax.mail.search.FlagTerm;
 import javax.mail.search.SearchTerm;
-
-import org.apache.commons.configuration.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.sourceforge.net.javamail4ews.util.EwsMailConverter;
+import javax.security.auth.login.Configuration;
 
 import microsoft.exchange.webservices.data.core.ExchangeService;
 import microsoft.exchange.webservices.data.core.PropertySet;
@@ -60,6 +57,10 @@ import microsoft.exchange.webservices.data.search.FindItemsResults;
 import microsoft.exchange.webservices.data.search.FolderView;
 import microsoft.exchange.webservices.data.search.ItemView;
 import microsoft.exchange.webservices.data.search.filter.SearchFilter;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.sourceforge.net.javamail4ews.util.EwsMailConverter;
 
 //TODO Disconnected event for ConnectionListeners
 public class EwsFolder extends javax.mail.Folder {
@@ -107,14 +108,15 @@ public class EwsFolder extends javax.mail.Folder {
     private EwsFolder(EwsStore store, FolderId pFolderId, FolderId pParentFolderId) {
         super(store);
         addFolderListener(new FolderListenerPublisher());
-
-        ITEM_VIEW_MAX_ITEMS = getConfiguration().getInt(
-                "org.sourceforge.net.javamail4ews.store.EwsFolder.ItemViewMaxItems");
-        CONFLICT_RESOLUTION_MODE = ConflictResolutionMode.valueOf(getConfiguration().getString(
+        Properties props = getConfiguration();
+        
+        ITEM_VIEW_MAX_ITEMS = Integer.parseInt(props.getProperty(
+                "org.sourceforge.net.javamail4ews.store.EwsFolder.ItemViewMaxItems"));
+        CONFLICT_RESOLUTION_MODE = ConflictResolutionMode.valueOf(props.getProperty(
                 "org.sourceforge.net.javamail4ews.store.EwsFolder.ConflictResolutionMode"));
-        DELETE_MODE = DeleteMode.valueOf(getConfiguration().getString(
+        DELETE_MODE = DeleteMode.valueOf(props.getProperty(
                 "org.sourceforge.net.javamail4ews.store.EwsFolder.DeleteMode"));
-        prefetchItems = getConfiguration().getBoolean("org.sourceforge.net.javamail4ews.store.EwsFolder.prefetchItems");
+        prefetchItems = Boolean.valueOf(props.getProperty("org.sourceforge.net.javamail4ews.store.EwsFolder.prefetchItems","false"));
         try {
             INBOX = Folder.bind(getService(), new FolderId(WellKnownFolderName.Inbox));
 
@@ -495,7 +497,7 @@ public class EwsFolder extends javax.mail.Folder {
         return lStore.getService();
     }
 
-    private Configuration getConfiguration() {
+    private Properties getConfiguration() {
         return getStore().getConfiguration();
     }
 
