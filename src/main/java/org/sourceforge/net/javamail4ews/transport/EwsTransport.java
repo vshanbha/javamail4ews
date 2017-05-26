@@ -35,7 +35,6 @@ import javax.mail.Transport;
 import javax.mail.URLName;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import javax.security.auth.login.Configuration;
 
 import microsoft.exchange.webservices.data.core.ExchangeService;
 import microsoft.exchange.webservices.data.core.enumeration.property.BodyType;
@@ -82,6 +81,7 @@ public class EwsTransport extends Transport {
 	public void sendMessage(Message pMessage, Address[] addresses, Address[] ccaddresses, Address[] bccaddresses) throws MessagingException {
 		try {
 			EmailMessage msg = new EmailMessage(getService());
+			pMessage.saveChanges();
 			createHeaders(msg, pMessage);
 
 			createAddresses(msg, pMessage, addresses, ccaddresses, bccaddresses);
