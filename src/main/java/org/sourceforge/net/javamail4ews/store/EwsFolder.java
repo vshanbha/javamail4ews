@@ -33,7 +33,6 @@ import javax.mail.event.FolderEvent;
 import javax.mail.event.FolderListener;
 import javax.mail.search.FlagTerm;
 import javax.mail.search.SearchTerm;
-import javax.security.auth.login.Configuration;
 
 import microsoft.exchange.webservices.data.core.ExchangeService;
 import microsoft.exchange.webservices.data.core.PropertySet;
@@ -92,6 +91,8 @@ public class EwsFolder extends javax.mail.Folder {
     private final Folder parentFolder;
 
     private boolean prefetchItems = true;
+    
+    private int prefetchCount = 10;
 
     private String name;
 
@@ -296,22 +297,51 @@ public class EwsFolder extends javax.mail.Folder {
 
     @Override
     public EwsMessage getMessage(int msgnum) throws MessagingException {
-        // 1 based!
-        EwsMessage lMessage = messages.get(msgnum - 1);
-        // lMessage.setFlag(Flag.SEEN, true);
-        return lMessage;
+    	if (msgnum > messages.size()) {
+    		int maxCount = getMessageCount();
+    		try {
+        		if (messages.size() + prefetchCount > msgnum) {
+        			int end = messages.size() + prefetchCount;
+        			end = end > maxCount ? maxCount : end;
+        			logger.debug("Prefetching {} to {} ",messages.size(), end);
+        			// Message number is nearby loaded messages. Just fetch next lot and return message.
+        			EwsMessage[] msgs = loadMessages(messages.size(), end);
+        			for (EwsMessage m : msgs) {
+        				messages.add(m);
+        			}
+        			logger.info("loaded count " + messages.size());
+                    // 1 based!
+        			return messages.get(msgnum-1);
+        		} else if (msgnum > maxCount) {
+        			// Message number is outside expected range
+    				throw new MessagingException("Requested message number is more than folder size");
+    			} else {
+    				int msgNo = msgnum;
+    				if (msgNo > maxCount) 
+    					msgNo = maxCount;
+        			logger.debug("loading message {}",msgnum);
+    				// Message number is valid but far away from currently loaded set.
+        			EwsMessage[] msgs = loadMessages(msgNo,msgNo < maxCount ? msgNo + 1 : msgNo);
+                    // lMessage.setFlag(Flag.SEEN, true);
+                    return msgs[0];
+    			}
+    		} catch (Exception e) {
+    			throw new MessagingException(e.getMessage(), e);
+    		}
+    	} else {
+            // 1 based!
+            EwsMessage lMessage = messages.get(msgnum > 0 ? msgnum - 1 : 0);
+            // lMessage.setFlag(Flag.SEEN, true);
+            return lMessage;    		
+    	}
     }
 
-    @Override
+	@Override
     public int getMessageCount() throws MessagingException {
-        if (prefetchItems) {
-            return messages.size();
-        } else {
-            try {
-                return folder.getTotalCount();
-            } catch (Exception e) {
-                throw new MessagingException(e.getMessage(), e);
-            }
+        try {
+            return folder.getTotalCount();
+        } catch (Exception e) {
+            throw new MessagingException(e.getMessage(), e);
         }
     }
 
@@ -458,7 +488,7 @@ public class EwsFolder extends javax.mail.Folder {
                     }
                 }
             } else {
-
+            	messages = new ArrayList<EwsMessage>();
             }
             timestamp = new Date();
             getStore().notifyConnectionListeners(ConnectionEvent.OPENED);
@@ -501,6 +531,28 @@ public class EwsFolder extends javax.mail.Folder {
         return getStore().getConfiguration();
     }
 
+    private EwsMessage[] loadMessages(int start, int end) throws Exception {
+    	if (end < start) return null;
+    	if (start > getMessageCount()) return null;
+    	int pageSize = end - start > 0 ? end - start : 1;
+    	int offset = start == 0 ? start : start - 1;
+    	EwsMessage[] output = new EwsMessage[pageSize];
+    	ItemView pageView = new ItemView(pageSize, offset);
+    	FindItemsResults<Item> lFindResults = getService().findItems(folder.getId(), pageView);
+        int i = 0;
+        for (Item aItem : lFindResults) {
+            if (aItem instanceof EmailMessage) {
+                EmailMessage aEmailMessage = (EmailMessage) aItem;
+                EwsMailConverter aConverter = new EwsMailConverter(this, aEmailMessage, start + i );
+                output[i] = aConverter.convert();
+                i++;
+            } else {
+                logger.warn("Skipping item {} as it is a {}", aItem.getId(), aItem.getClass());
+            }
+        }
+        return output;
+	}
+    
     public Message[] getUnreadMessage(int maxMessages) throws Exception {
 
         ItemView unreadView = null;
